@@ -27,13 +27,31 @@ def validate(line: str) -> str:
     return text
 
 
+def verify_round_trip(line: str) -> None:
+    """Check the written file round-trips byte-identical to the line.
+
+    Reads the raw bytes (not decoded text) so a trailing newline, a
+    stray carriage return, or any encoding change is caught instead of
+    silently normalised away by the text decoder.
+    """
+    raw = OUTPUT_PATH.read_bytes()
+    expected = line.encode("utf-8")
+    if raw != expected:
+        raise RuntimeError(
+            f"entry.txt is {len(raw)} bytes, expected {len(expected)} "
+            "bytes of the validated line"
+        )
+    if raw.endswith(b"\n") or raw.endswith(b"\r"):
+        raise RuntimeError("entry.txt must not end with a newline")
+    if b"\n" in raw or b"\r" in raw:
+        raise RuntimeError("entry.txt must be a single line")
+
+
 def main() -> None:
     line = validate(ENTRY)
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(line, encoding="utf-8")
-    written = OUTPUT_PATH.read_text(encoding="utf-8")
-    if written != line:
-        raise RuntimeError("entry.txt does not match the validated line")
+    verify_round_trip(line)
     print(line)
 
 
